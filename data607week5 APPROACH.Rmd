@@ -1,0 +1,23 @@
+---
+title: "Week 5 — Tidying & Transforming Data (Approach)"
+author: "IZZA KHAN"
+date: "2026-02-27"
+output: html_document
+---
+# Introduction
+
+This assignment analyzes arrival delays for two airlines (Alaska and AM West) across five destinations: Los Angeles, Phoenix, San Diego, San Francisco, and Seattle. The goal is to recreate the dataset from the provided chart, tidy it into a long format, and compare delay rates overall and by city.
+
+# Planned Approach
+
+First, I will recreate the chart data in a CSV file using a wide structure similar to the original table (airline + status rows, city columns). I will store the CSV in my public GitHub repository so the data is accessible from anywhere and my work is reproducible.
+
+Next, I will read the CSV into R using tidyverse tools and verify that the values match the chart. I will then transform the dataset from wide to long format using `pivot_longer()`, producing a tidy table where each row represents an airline, a status (on time or delayed), a city, and the count.
+
+After tidying, I will calculate delay percentages (delayed / total) for each airline overall and compare them using a table and/or chart. Then I will compute delay percentages within each city for both airlines and compare across the five cities using a table and/or visualization.
+
+Finally, I will write a short explanation for any difference between the overall comparison and the city-by-city comparison. Because the number of flights differs across cities (especially Phoenix), the overall result may be influenced by weighting across destinations, which can lead to a Simpson’s Paradox-style discrepancy.
+
+# Potential Data Challenges
+
+The main challenge is ensuring the recreated wide CSV matches the chart exactly (correct city names, correct counts, and correct placement for on-time vs delayed rows). Another challenge is avoiding mistakes during reshaping so that counts stay aligned with the correct airline and status. I will also double-check percentage calculations to make sure comparisons are based on rates rather than raw counts.
