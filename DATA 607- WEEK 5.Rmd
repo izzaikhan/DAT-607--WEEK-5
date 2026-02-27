@@ -1,0 +1,93 @@
+---
+title: "DATA 607 Week 5 — Tidying & Transforming Data"
+author: Izza Khan
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+library(tidyverse)
+```
+```{R}
+flights <- read_csv("arrival_delays.csv")
+flights
+```
+
+```{r}
+## Transform from wide to long
+```
+
+```{r}
+flights_long <- flights %>%
+  pivot_longer(
+    cols = c(`Los Angeles`, Phoenix, `San Diego`, `San Francisco`, Seattle),
+    names_to = "City",
+    values_to = "Count"
+  )
+
+flights_long
+```
+
+```{r}
+## Count analysis
+```
+
+```{r}
+flights_long %>%
+  group_by(Airline, Status) %>%
+  summarise(Total = sum(Count), .groups="drop")
+```
+
+```{r}
+## Overall delay percentage by airline
+```
+
+```{r}
+overall <- flights_long %>%
+  group_by(Airline, Status) %>%
+  summarise(Total = sum(Count), .groups="drop") %>%
+  pivot_wider(names_from = Status, values_from = Total) %>%
+  mutate(
+    AllFlights = `on time` + delayed,
+    DelayRate = delayed / AllFlights
+  )
+```
+
+```{r}
+ggplot(overall, aes(x = Airline, y = DelayRate)) +
+  geom_col() +
+  scale_y_continuous(labels = scales::percent) +
+  labs(title="Overall Delay Rate by Airline", y="Delay %", x=NULL)
+```
+
+- Overall, AM West has a lower delay percentage than Alaska.
+
+```{r}
+## Delay percentage by city
+```
+
+```{r}
+by_city <- flights_long %>%
+  group_by(Airline, City, Status) %>%
+  summarise(Total = sum(Count), .groups="drop") %>%
+  pivot_wider(names_from = Status, values_from = Total) %>%
+  mutate(
+    AllFlights = `on time` + delayed,
+    DelayRate = delayed / AllFlights
+  )
+```
+
+```{r}
+ggplot(by_city, aes(x = City, y = DelayRate, group = Airline, color = Airline)) +
+  geom_line() +
+  geom_point(size = 3) +
+  scale_y_continuous(labels = scales::percent) +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1)) +
+  labs(title="Delay Rate by City", y="Delay %", x=NULL)
+```
+
+- By city, Alaska has a lower delay % in Los Angeles, Phoenix, San Diego, San Francisco, and Seattle
+- Even though AM West looks better overall
+The overall comparison differs from the city-by-city comparison because the overall delay rate is a weighted average. AM West has a much larger number of flights in Phoenix, which has a relatively low delay rate, so Phoenix heavily influences AM West’s overall delay percentage. When looking within each city, Alaska can appear better, but when the data is combined, the weighting across cities can reverse the conclusion. This is an example of Simpson’s Paradox.
+
