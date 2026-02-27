@@ -1,0 +1,27 @@
+---
+title: "DATA 607 Assignment 5B — ELO Calculations (Approach)"
+author: "IZZA KHAN"
+date: "2026-02-27"
+output: html_document
+---
+# Introduction
+
+This assignment analyzes chess tournament results from Project 1 using the Elo rating system. The goal is to estimate each player's expected performance based on their rating relative to the ratings of their opponents. By comparing expected scores with actual scores, we can identify which players overperformed or underperformed relative to expectations.
+
+# Planned Approach
+
+First, I will use the cleaned tournament dataset created in Project 1, which includes each player’s name, rating, opponent ratings, and total points earned in the tournament. The Elo rating formula will be used to calculate the expected score for each match based on the difference between the player's rating and the opponent's rating.
+
+The expected score for a player in a single match will be calculated using the standard Elo expected score formula:
+
+E = 1 / (1 + 10^((OpponentRating − PlayerRating) / 400))
+
+Using this formula, I will compute the expected score against each opponent and then sum those values to obtain the player's total expected score for the entire tournament.
+
+Next, I will compare each player's expected score with their actual score from the tournament. The difference between these values will indicate whether a player overperformed or underperformed relative to their rating.
+
+Finally, I will rank players by the difference between their expected and actual scores. The five players with the largest positive differences will be identified as the most overperforming players, while the five players with the largest negative differences will be identified as the most underperforming players.
+
+# Potential Data Challenges
+
+One challenge is ensuring that opponent ratings are correctly associated with each player so that expected scores are calculated accurately. Another potential issue is handling cases where players faced multiple opponents with different ratings, which requires computing expected scores for each match individually before summing them. Care must also be taken to ensure that the Elo formula is implemented correctly and consistently across all players.
