@@ -1,0 +1,211 @@
+---
+title: "Assignment 5B: Chess ELO Calculations"
+format: html
+---
+
+## Introduction
+
+In this assignment, I calculate each chess player’s expected score based on Elo rating differences against each opponent, then compare expected vs. actual performance. I also list the five players who most overperformed and the five who most underperformed.
+
+## Setup
+```{r} 
+library(tidyverse)
+```
+```{R}
+# Use a URL (GitHub raw link), not a local file path.
+```
+
+```{R}
+# TODO: Implement expected score formula and compute expected score per matchup.
+# Cite source for formula in the narrative text above/below.
+```
+
+```{R}
+# TODO: Summarize expected totals and compare to actual totals.
+# Output top 5 overperformers and top 5 underperformers.
+```
+
+```{R}
+library(readr)
+
+df <- read_csv("https://raw.githubusercontent.com/izzaikhan/DATA607-PROJECT-1/main/tournamentinfo.txt")
+```
+
+```{R}
+glimpse(df)
+head(df)
+```
+
+```{R}
+# 1) load packages
+library(tidyverse)
+
+# 2) read the local file using pipe delimiter and trim whitespace
+df_raw <- read_delim("tournamentinfo.txt",
+                     delim = "|",
+                     trim_ws = TRUE,
+                     col_names = TRUE,
+                     show_col_types = FALSE)
+
+# 3) quick cleaning: remove leading/trailing spaces in column names and values
+```
+
+```{R}
+library(readr)
+
+df <- read_delim("tournamentinfo.txt",
+                 delim = "|",
+                 trim_ws = TRUE,
+                 show_col_types = FALSE)
+
+names(df)
+head(df, 5)
+```
+
+```{R}
+library(tibble)
+library(stringr)
+
+raw_lines <- readLines("tournamentinfo.txt", warn = FALSE)
+
+# Remove divider lines like "-----"
+raw_lines <- raw_lines[!grepl("^-{3,}$", str_trim(raw_lines))]
+
+# Pick delimiter (try normal pipe first, else unicode pipe)
+delim_used <- if (any(grepl("\\|", raw_lines))) "\\|" else "│"
+
+spl <- strsplit(raw_lines, delim_used, perl = TRUE)
+maxcols <- max(lengths(spl))
+
+mat <- do.call(rbind, lapply(spl, function(x) c(x, rep(NA, maxcols - length(x)))))
+
+df <- as_tibble(mat) %>%
+  mutate(across(everything(), ~ str_trim(as.character(.))))
+
+# If the first row looks like headers, use it
+hdr <- as.character(unlist(df[1, ]))
+names(df) <- make.names(hdr, unique = TRUE)
+df <- df[-1, ]
+
+names(df)
+head(df, 5)
+```
+
+```{R}
+library(tidyverse)
+library(stringr)
+
+# 1) Add a row index so we can match each player row with the rating row under it
+df2 <- df %>%
+  mutate(row_id = row_number())
+
+# 2) "Player rows" are the ones where Pair is a number
+players <- df2 %>%
+  filter(str_detect(Pair, "^\\d+$")) %>%
+  mutate(pair_num = as.integer(Pair)) %>%
+  select(row_id, pair_num, player_name = Player.Name, total_pts = Total,
+         r1 = Round, r2 = Round.1, r3 = Round.2, r4 = Round.3, r5 = Round.4, r6 = Round.5, r7 = Round.6)
+
+# 3) The "rating rows" are the lines right AFTER each player row (row_id + 1)
+ratings <- df2 %>%
+  filter(row_id %in% (players$row_id + 1)) %>%
+  mutate(pair_num = players$pair_num) %>%
+  transmute(
+    pair_num,
+    rating_text = Player.Name,
+    pre_rating = as.integer(
+      str_extract(
+        str_extract(rating_text, "R:\\s*\\d+"),
+        "\\d+"
+      )
+    )
+  )
+```
+
+```{R}
+head(ratings)
+```
+
+```{R}
+players <- players %>%
+  left_join(ratings, by = "pair_num") %>%
+  rename(player_rating = pre_rating)
+
+glimpse(players)
+```
+
+```{R}
+games <- players %>%
+  pivot_longer(
+    cols = matches("^r\\d"),
+    names_to = "round",
+    values_to = "result_raw"
+  ) %>%
+  mutate(
+    result = str_extract(result_raw, "^[WDL]"),
+    opp_num = as.integer(str_extract(result_raw, "\\d+")),
+    actual_score = case_when(
+      result == "W" ~ 1,
+      result == "D" ~ 0.5,
+      result == "L" ~ 0,
+      TRUE ~ NA_real_
+    )
+  ) %>%
+  filter(!is.na(opp_num), !is.na(actual_score)) %>%
+  select(
+    player_num = pair_num,
+    player_name,
+    player_rating,
+    round,
+    opp_num,
+    actual_score
+  )
+
+head(games, 10)
+```
+
+```{R}
+opp_lookup <- players %>%
+  select(
+    opp_num = pair_num,
+    opp_name = player_name,
+    opp_rating = player_rating
+  )
+
+games <- games %>%
+  left_join(opp_lookup, by = "opp_num")
+
+head(games, 10)
+```
+
+```{R}
+expected_score <- function(r_player, r_opp) {
+  1 / (1 + 10 ^ ((r_opp - r_player) / 400))
+}
+
+games <- games %>%
+  mutate(expected = expected_score(player_rating, opp_rating))
+
+summary_tbl <- games %>%
+  group_by(player_num, player_name, player_rating) %>%
+  summarise(
+    expected_total = sum(expected, na.rm = TRUE),
+    actual_total = sum(actual_score, na.rm = TRUE),
+    diff = actual_total - expected_total,
+    .groups = "drop"
+  )
+
+top_over <- summary_tbl %>% arrange(desc(diff)) %>% slice_head(n = 5)
+top_under <- summary_tbl %>% arrange(diff) %>% slice_head(n = 5)
+
+top_over
+top_under
+```
+
+I used the standard Elo expected-score formula.I computed expected score per matchup, summed expected totals per player, and compared them to actual totals (diff = actual − expected) to identify over- and under-performance.
+
+```{R}
+top_over
+top_under
+```
+
